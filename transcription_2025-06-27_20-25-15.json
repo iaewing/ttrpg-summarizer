@@ -1,0 +1,90 @@
+{
+    "metadata": {
+        "transaction_key": "deprecated",
+        "request_id": "d9b4eb3d-ae83-4791-9bc9-003a7faf0c66",
+        "sha256": "cd904fc1d66713ac0ad1057277767985763f46efef016900a2a07347bbd176a7",
+        "created": "2025-06-27T20:25:14.869Z",
+        "duration": 70.262184,
+        "channels": 1,
+        "models": [
+            "1ed36bac-f71c-4f3f-a31f-02fd6525c489"
+        ],
+        "model_info": {
+            "1ed36bac-f71c-4f3f-a31f-02fd6525c489": {
+                "name": "general",
+                "version": "2024-01-26.8851",
+                "arch": "base"
+            }
+        }
+    },
+    "results": {
+        "channels": [
+            {
+                "alternatives": [
+                    {
+                        "transcript": "and it missing presumed and all now",
+                        "confidence": 0.54589844,
+                        "words": [
+                            {
+                                "word": "and",
+                                "start": 17.0295,
+                                "end": 17.5295,
+                                "confidence": 0.51464844,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            },
+                            {
+                                "word": "it",
+                                "start": 17.9871,
+                                "end": 18.4871,
+                                "confidence": 0.4921875,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            },
+                            {
+                                "word": "missing",
+                                "start": 25.6479,
+                                "end": 26.1479,
+                                "confidence": 0.70703125,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            },
+                            {
+                                "word": "presumed",
+                                "start": 26.3661,
+                                "end": 26.8661,
+                                "confidence": 0.92822266,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            },
+                            {
+                                "word": "and",
+                                "start": 28.1217,
+                                "end": 28.6217,
+                                "confidence": 0.54589844,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            },
+                            {
+                                "word": "all",
+                                "start": 29.0793,
+                                "end": 29.5793,
+                                "confidence": 0.6557617,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            },
+                            {
+                                "word": "now",
+                                "start": 30.276299,
+                                "end": 30.776299,
+                                "confidence": 0.5307617,
+                                "speaker": 0,
+                                "speaker_confidence": 1.0
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
