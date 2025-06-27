@@ -146,7 +146,7 @@ export default function TranscriptionsIndex({ transcriptions, supportedMimeTypes
     <AppLayout>
       <Head title="Audio Transcriptions" />
       
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <div>
           <h1 className="text-3xl font-bold">Audio Transcriptions</h1>
           <p className="text-muted-foreground">
