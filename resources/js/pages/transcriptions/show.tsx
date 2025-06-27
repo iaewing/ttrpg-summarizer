@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Head, router } from '@inertiajs/react'
 import AppLayout from '@/layouts/app-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,6 +33,8 @@ interface Props {
 }
 
 export default function TranscriptionsShow({ transcription }: Props) {
+  const [pauseThreshold, setPauseThreshold] = useState(3) // seconds
+
   const formatTime = (seconds: number) => {
     if (!seconds) return 'N/A'
     const mins = Math.floor(seconds / 60)
@@ -56,6 +58,52 @@ export default function TranscriptionsShow({ transcription }: Props) {
     } catch (err) {
       console.error('Failed to copy text: ', err)
     }
+  }
+
+  const copyFormattedTranscript = async () => {
+    if (!transcription.speakers || Object.keys(transcription.speakers).length === 0) {
+      await copyToClipboard(transcription.transcript)
+      return
+    }
+
+    // Generate formatted transcript with speaker labels
+    const allSegments: Array<{
+      speaker: string
+      text: string
+      start: number | null
+      end: number | null
+    }> = []
+
+    Object.entries(transcription.speakers).forEach(([speaker, segments]) => {
+      segments.forEach(segment => {
+        allSegments.push({
+          speaker,
+          ...segment
+        })
+      })
+    })
+
+    allSegments.sort((a, b) => {
+      if (!a.start || !b.start) return 0
+      return a.start - b.start
+    })
+
+    // Group consecutive segments and format for copying
+    let formattedText = ''
+    let lastSpeaker = ''
+    
+    for (const segment of allSegments) {
+      if (segment.speaker !== lastSpeaker) {
+        if (formattedText) formattedText += '\n\n'
+        formattedText += `${segment.speaker}: `
+        lastSpeaker = segment.speaker
+      } else {
+        formattedText += ' '
+      }
+      formattedText += segment.text
+    }
+
+    await copyToClipboard(formattedText)
   }
 
   const getSpeakerCount = () => {
@@ -95,22 +143,92 @@ export default function TranscriptionsShow({ transcription }: Props) {
       return a.start - b.start
     })
 
+    // Group consecutive segments from the same speaker
+    const groupedSegments: Array<{
+      speaker: string
+      text: string
+      start: number | null
+      end: number | null
+      segmentCount: number
+    }> = []
+
+    for (let i = 0; i < allSegments.length; i++) {
+      const current = allSegments[i]
+      
+      if (groupedSegments.length === 0) {
+        // First segment
+        groupedSegments.push({
+          ...current,
+          segmentCount: 1
+        })
+      } else {
+        const lastGroup = groupedSegments[groupedSegments.length - 1]
+        const timePauseBetween = (current.start && lastGroup.end) 
+          ? current.start - lastGroup.end 
+          : null
+        
+        // Group with previous if same speaker and pause is less than threshold (or no timing info)
+        if (lastGroup.speaker === current.speaker && 
+            (timePauseBetween === null || timePauseBetween <= pauseThreshold)) {
+          
+          // Combine with previous group
+          lastGroup.text += ' ' + current.text
+          lastGroup.end = current.end
+          lastGroup.segmentCount += 1
+        } else {
+          // Create new group
+          groupedSegments.push({
+            ...current,
+            segmentCount: 1
+          })
+        }
+      }
+    }
+
     return (
-      <div className="space-y-4">
-        {allSegments.map((segment, index) => (
-          <div key={index} className="flex space-x-4">
-            <div className="flex-shrink-0">
-              <Badge variant="outline" className="w-20 justify-center">
-                {segment.speaker}
+      <div className="space-y-6">
+        {groupedSegments.map((group, index) => (
+          <div 
+            key={index} 
+            className={`flex space-x-4 p-4 rounded-lg transition-colors ${
+              group.segmentCount > 1 
+                ? 'bg-muted/30 border border-muted' 
+                : 'hover:bg-muted/10'
+            }`}
+          >
+            <div className="flex-shrink-0 pt-1">
+              <Badge 
+                variant={group.segmentCount > 1 ? "default" : "outline"} 
+                className="w-20 justify-center"
+              >
+                {group.speaker}
               </Badge>
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-sm leading-relaxed">{segment.text}</p>
-              {(segment.start || segment.end) && (
-                <p className="text-xs text-muted-foreground">
-                  {formatTime(segment.start || 0)} - {formatTime(segment.end || 0)}
+            <div className="flex-1 space-y-2">
+              <div className="prose prose-sm max-w-none">
+                <p className="text-sm leading-relaxed text-foreground mb-0 whitespace-pre-wrap">
+                  {group.text}
                 </p>
-              )}
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {(group.start || group.end) && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatTime(group.start || 0)} - {formatTime(group.end || 0)}
+                    {group.start && group.end && (
+                      <span className="ml-1">
+                        ({Math.round(group.end - group.start)}s)
+                      </span>
+                    )}
+                  </span>
+                )}
+                {group.segmentCount > 1 && (
+                  <span className="flex items-center gap-1 text-primary">
+                    <Users className="h-3 w-3" />
+                    {group.segmentCount} segments combined
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -193,8 +311,17 @@ export default function TranscriptionsShow({ transcription }: Props) {
               onClick={() => copyToClipboard(transcription.transcript)}
             >
               <Copy className="h-4 w-4 mr-2" />
-              Copy Text
+              Copy Raw Text
             </Button>
+            {transcription.speakers && Object.keys(transcription.speakers).length > 0 && (
+              <Button
+                variant="outline"
+                onClick={copyFormattedTranscript}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Copy with Speakers
+              </Button>
+            )}
           </div>
         </div>
 
@@ -253,10 +380,29 @@ export default function TranscriptionsShow({ transcription }: Props) {
         {/* Speaker Diarization */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Speaker Diarization
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Speaker Diarization
+              </CardTitle>
+              <div className="flex items-center gap-2 text-sm">
+                <label htmlFor="pause-threshold" className="text-muted-foreground">
+                  Group threshold:
+                </label>
+                <select
+                  id="pause-threshold"
+                  value={pauseThreshold}
+                  onChange={(e) => setPauseThreshold(Number(e.target.value))}
+                  className="px-2 py-1 text-xs border rounded bg-background"
+                >
+                  <option value={1}>1s</option>
+                  <option value={2}>2s</option>
+                  <option value={3}>3s</option>
+                  <option value={5}>5s</option>
+                  <option value={10}>10s</option>
+                </select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {renderSpeakerConversation()}
