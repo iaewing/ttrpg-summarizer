@@ -5,21 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Transcription extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'original_filename',
-        'file_path',
-        'file_size',
-        'mime_type',
+        'recording_id',
         'status',
         'transcript',
         'full_response',
-        'speakers',
         'confidence',
         'duration_seconds',
         'error_message',
@@ -27,13 +23,17 @@ class Transcription extends Model
 
     protected $casts = [
         'full_response' => 'array',
-        'speakers' => 'array',
         'confidence' => 'decimal:4',
     ];
 
-    public function user(): BelongsTo
+    public function recording(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Recording::class);
+    }
+
+    public function speakers(): HasMany
+    {
+        return $this->hasMany(Speaker::class);
     }
 
     public function isPending(): bool
