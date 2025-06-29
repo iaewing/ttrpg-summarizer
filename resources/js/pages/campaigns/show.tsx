@@ -1,10 +1,14 @@
-import { Head, Link } from '@inertiajs/react';
-import { Campaign, GameSession } from '@/types';
+import { useState } from 'react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
+import { Campaign, GameSession, Player, Character } from '@/types';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
     ArrowLeft, 
     Plus, 
@@ -17,13 +21,20 @@ import {
     CheckCircle,
     Clock,
     XCircle,
-    Edit
+    Edit,
+    Crown,
+    User,
+    Trash2
 } from 'lucide-react';
 
 interface Props {
     campaign: Campaign & {
         sessions: GameSession[];
+        activePlayers: (Player & { pivot?: { role: string; is_active: boolean; joined_at?: string; left_at?: string; notes?: string } })[];
+        activeCharacters: (Character & { pivot?: { introduced_at?: string; left_at?: string; is_active: boolean; campaign_notes?: string } })[];
     };
+    availablePlayers: Player[];
+    availableCharacters: Character[];
     stats: {
         total_sessions: number;
         completed_sessions: number;
@@ -64,7 +75,56 @@ const getStatusColor = (status: GameSession['status']) => {
     }
 };
 
-export default function CampaignShow({ campaign, stats }: Props) {
+export default function CampaignShow({ campaign, availablePlayers, availableCharacters, stats }: Props) {
+    const [showAddPlayer, setShowAddPlayer] = useState(false);
+    const [showAddCharacter, setShowAddCharacter] = useState(false);
+    
+    const { data: playerData, setData: setPlayerData, post: postPlayer, processing: processingPlayer, errors: playerErrors, reset: resetPlayer } = useForm({
+        player_id: '',
+        role: 'player',
+        notes: '',
+    });
+    
+    const { data: characterData, setData: setCharacterData, post: postCharacter, processing: processingCharacter, errors: characterErrors, reset: resetCharacter } = useForm({
+        character_id: '',
+        campaign_notes: '',
+    });
+    
+    const handleAddPlayer = (e: React.FormEvent) => {
+        e.preventDefault();
+        postPlayer(route('campaigns.players.add', campaign.id), {
+            onSuccess: () => {
+                resetPlayer();
+                setShowAddPlayer(false);
+            },
+        });
+    };
+    
+    const handleAddCharacter = (e: React.FormEvent) => {
+        e.preventDefault();
+        postCharacter(route('campaigns.characters.add', campaign.id), {
+            onSuccess: () => {
+                resetCharacter();
+                setShowAddCharacter(false);
+            },
+        });
+    };
+    
+    const handleRemovePlayer = (playerId: number) => {
+        if (confirm('Are you sure you want to remove this player from the campaign?')) {
+            router.delete(route('campaigns.players.remove', campaign.id), {
+                data: { player_id: playerId },
+            });
+        }
+    };
+    
+    const handleRemoveCharacter = (characterId: number) => {
+        if (confirm('Are you sure you want to remove this character from the campaign?')) {
+            router.delete(route('campaigns.characters.remove', campaign.id), {
+                data: { character_id: characterId },
+            });
+        }
+    };
     return (
         <AppLayout>
             <Head title={campaign.name} />
@@ -165,6 +225,215 @@ export default function CampaignShow({ campaign, stats }: Props) {
                                     <span className="text-sm text-muted-foreground">Transcribed</span>
                                 </div>
                                 <p className="text-2xl font-bold">{stats.transcribed_recordings}</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Players & Characters Management */}
+                    <div className="grid gap-6 md:grid-cols-2 mb-6">
+                        {/* Players */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle>Players</CardTitle>
+                                        <CardDescription>
+                                            Players participating in this campaign
+                                        </CardDescription>
+                                    </div>
+                                    <Button 
+                                        onClick={() => setShowAddPlayer(!showAddPlayer)}
+                                        disabled={availablePlayers.length === 0}
+                                        size="sm"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Player
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {showAddPlayer && (
+                                    <form onSubmit={handleAddPlayer} className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="player_id">Player</Label>
+                                            <Select value={playerData.player_id} onValueChange={(value) => setPlayerData('player_id', value)}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a player..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availablePlayers.map((player) => (
+                                                        <SelectItem key={player.id} value={player.id.toString()}>
+                                                            <div className="flex items-center gap-2">
+                                                                {player.is_dm && <Crown className="h-3 w-3" />}
+                                                                {player.name}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {playerErrors.player_id && <p className="text-sm text-destructive">{playerErrors.player_id}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="role">Role</Label>
+                                            <Select value={playerData.role} onValueChange={(value) => setPlayerData('role', value)}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="player">Player</SelectItem>
+                                                    <SelectItem value="dm">Dungeon Master</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="notes">Notes (optional)</Label>
+                                            <Textarea
+                                                value={playerData.notes}
+                                                onChange={(e) => setPlayerData('notes', e.target.value)}
+                                                placeholder="Any notes about this player's role in the campaign..."
+                                                rows={2}
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button type="submit" disabled={processingPlayer || !playerData.player_id} size="sm">
+                                                Add Player
+                                            </Button>
+                                            <Button type="button" variant="outline" onClick={() => setShowAddPlayer(false)} size="sm">
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </form>
+                                )}
+                                {campaign.activePlayers?.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <Users className="h-8 w-8 mx-auto mb-2" />
+                                        <p>No players in this campaign yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {campaign.activePlayers?.map((player) => (
+                                            <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    {player.is_dm ? <Crown className="h-4 w-4 text-yellow-600" /> : <User className="h-4 w-4" />}
+                                                    <div>
+                                                        <p className="font-medium">{player.name}</p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {player.pivot?.role === 'dm' ? 'Dungeon Master' : 'Player'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemovePlayer(player.id)}
+                                                    className="text-destructive hover:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Characters */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle>Characters</CardTitle>
+                                        <CardDescription>
+                                            Characters appearing in this campaign
+                                        </CardDescription>
+                                    </div>
+                                    <Button 
+                                        onClick={() => setShowAddCharacter(!showAddCharacter)}
+                                        disabled={availableCharacters.length === 0}
+                                        size="sm"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Character
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {showAddCharacter && (
+                                    <form onSubmit={handleAddCharacter} className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="character_id">Character</Label>
+                                            <Select value={characterData.character_id} onValueChange={(value) => setCharacterData('character_id', value)}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a character..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableCharacters.map((character) => (
+                                                        <SelectItem key={character.id} value={character.id.toString()}>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium">{character.name}</span>
+                                                                {character.player && (
+                                                                    <span className="text-muted-foreground text-sm">
+                                                                        ({character.player.name})
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {characterErrors.character_id && <p className="text-sm text-destructive">{characterErrors.character_id}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="campaign_notes">Campaign Notes (optional)</Label>
+                                            <Textarea
+                                                value={characterData.campaign_notes}
+                                                onChange={(e) => setCharacterData('campaign_notes', e.target.value)}
+                                                placeholder="Any notes about this character's role in the campaign..."
+                                                rows={2}
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button type="submit" disabled={processingCharacter || !characterData.character_id} size="sm">
+                                                Add Character
+                                            </Button>
+                                            <Button type="button" variant="outline" onClick={() => setShowAddCharacter(false)} size="sm">
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </form>
+                                )}
+                                {campaign.activeCharacters?.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <Activity className="h-8 w-8 mx-auto mb-2" />
+                                        <p>No characters in this campaign yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {campaign.activeCharacters?.map((character) => (
+                                            <div key={character.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                                <div>
+                                                    <p className="font-medium">{character.name}</p>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {character.race && character.class && (
+                                                            <span>{character.race} {character.class}</span>
+                                                        )}
+                                                        {character.player && (
+                                                            <span className="ml-2">• Played by {character.player.name}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleRemoveCharacter(character.id)}
+                                                    className="text-destructive hover:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

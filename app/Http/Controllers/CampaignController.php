@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Inertia\Inertia;
+use App\Models\Player;
 use App\Models\Campaign;
+use App\Models\Character;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 
 class CampaignController extends Controller
 {
@@ -77,8 +79,16 @@ class CampaignController extends Controller
             'activeCharacters.player'
         ]);
 
+        $allPlayers = Player::all();
+        $availablePlayers = $allPlayers->whereNotIn('id', $campaign->activePlayers->pluck('id'));
+        
+        $allCharacters = Character::with('player')->get();
+        $availableCharacters = $allCharacters->whereNotIn('id', $campaign->activeCharacters->pluck('id'));
+
         return Inertia::render('campaigns/show', [
             'campaign' => $campaign,
+            'availablePlayers' => $availablePlayers->values(),
+            'availableCharacters' => $availableCharacters->values(),
             'stats' => [
                 'total_sessions' => $campaign->sessions_count ?? $campaign->sessions->count(),
                 'completed_sessions' => $campaign->sessions->where('status', 'completed')->count(),
@@ -149,5 +159,115 @@ class CampaignController extends Controller
 
         return redirect()->route('campaigns.index')
             ->with('success', "Campaign '{$campaignName}' deleted successfully!");
+    }
+
+    /**
+     * Add a player to the campaign
+     */
+    public function addPlayer(Request $request, Campaign $campaign)
+    {
+        if ($campaign->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'player_id' => 'required|exists:players,id',
+            'role' => 'required|in:player,dm',
+            'notes' => 'nullable|string',
+        ]);
+
+        // Check if player is already in the campaign
+        if ($campaign->players()->where('player_id', $request->player_id)->exists()) {
+            return back()->withErrors(['player_id' => 'Player is already in this campaign.']);
+        }
+
+        $campaign->players()->attach($request->player_id, [
+            'role' => $request->role,
+            'is_active' => true,
+            'joined_at' => now(),
+            'notes' => $request->notes,
+        ]);
+
+        $player = Player::find($request->player_id);
+        
+        return back()->with('success', "Added {$player->name} to the campaign!");
+    }
+
+    /**
+     * Remove a player from the campaign
+     */
+    public function removePlayer(Request $request, Campaign $campaign)
+    {
+        if ($campaign->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'player_id' => 'required|exists:players,id',
+        ]);
+
+        $player = Player::find($request->player_id);
+        
+        if (!$campaign->players()->where('player_id', $request->player_id)->exists()) {
+            return back()->withErrors(['player_id' => 'Player is not in this campaign.']);
+        }
+
+        $campaign->players()->detach($request->player_id);
+        
+        return back()->with('success', "Removed {$player->name} from the campaign!");
+    }
+
+    /**
+     * Add a character to the campaign
+     */
+    public function addCharacter(Request $request, Campaign $campaign)
+    {
+        if ($campaign->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'character_id' => 'required|exists:characters,id',
+            'campaign_notes' => 'nullable|string',
+        ]);
+
+        // Check if character is already in the campaign
+        if ($campaign->characters()->where('character_id', $request->character_id)->exists()) {
+            return back()->withErrors(['character_id' => 'Character is already in this campaign.']);
+        }
+
+        $campaign->characters()->attach($request->character_id, [
+            'introduced_at' => now(),
+            'is_active' => true,
+            'campaign_notes' => $request->campaign_notes,
+        ]);
+
+        $character = Character::find($request->character_id);
+        
+        return back()->with('success', "Added {$character->name} to the campaign!");
+    }
+
+    /**
+     * Remove a character from the campaign
+     */
+    public function removeCharacter(Request $request, Campaign $campaign)
+    {
+        if ($campaign->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'character_id' => 'required|exists:characters,id',
+        ]);
+
+        $character = Character::find($request->character_id);
+        
+        if (!$campaign->characters()->where('character_id', $request->character_id)->exists()) {
+            return back()->withErrors(['character_id' => 'Character is not in this campaign.']);
+        }
+
+        $campaign->characters()->detach($request->character_id);
+        
+        return back()->with('success', "Removed {$character->name} from the campaign!");
     }
 }
