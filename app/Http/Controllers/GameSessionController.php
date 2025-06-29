@@ -124,10 +124,10 @@ class GameSessionController extends Controller
     {
         // Group speakers by their current identification
         $speakerGroups = [];
-        
+
         foreach ($allSpeakers as $speaker) {
             $groupKey = $this->getSpeakerGroupKey($speaker);
-            
+
             if (!isset($speakerGroups[$groupKey])) {
                 $speakerGroups[$groupKey] = [
                     'id' => $groupKey,
@@ -139,16 +139,16 @@ class GameSessionController extends Controller
                     'recordings' => [],
                 ];
             }
-            
+
             $speakerGroups[$groupKey]['speakers'][] = $speaker;
             $speakerGroups[$groupKey]['total_segments'] += count($speaker->segments ?? []);
-            
+
             $recordingName = $speaker->transcription->recording->name ?? 'Unknown Recording';
             if (!in_array($recordingName, $speakerGroups[$groupKey]['recordings'])) {
                 $speakerGroups[$groupKey]['recordings'][] = $recordingName;
             }
         }
-        
+
         return collect($speakerGroups)->values();
     }
 
@@ -161,7 +161,7 @@ class GameSessionController extends Controller
         if ($speaker->player_id || $speaker->character_id) {
             return "identified_{$speaker->player_id}_{$speaker->character_id}";
         }
-        
+
         // If unidentified, group by speaker_id (this assumes same speaker_id across recordings = same person)
         // This is a simplification - in reality, you might want more sophisticated matching
         return "unidentified_speaker_{$speaker->speaker_id}";
@@ -218,7 +218,7 @@ class GameSessionController extends Controller
         $sessionTitle = $session->title;
         $session->delete();
 
-        return redirect()->route('campaigns.sessions.index', $campaign)
+        return redirect()->route('campaigns.show', $campaign)
             ->with('success', "Session '{$sessionTitle}' deleted successfully!");
     }
 
