@@ -62,13 +62,13 @@ export default function SpeakerIdentificationCard({ sessionSpeaker, players, onU
     const getSpeakerTypeColor = (type: string) => {
         switch (type) {
             case 'dm':
-                return 'bg-purple-100 text-purple-800 border-purple-200';
+                return 'bg-purple-100 text-purple-700';
             case 'player':
-                return 'bg-blue-100 text-blue-800 border-blue-200';
+                return 'bg-blue-100 text-blue-700';
             case 'npc':
-                return 'bg-green-100 text-green-800 border-green-200';
+                return 'bg-green-100 text-green-700';
             default:
-                return 'bg-gray-100 text-gray-800 border-gray-200';
+                return 'bg-muted text-muted-foreground';
         }
     };
 
@@ -87,14 +87,18 @@ export default function SpeakerIdentificationCard({ sessionSpeaker, players, onU
         selectedSpeakerType !== (sessionSpeaker.speaker_type || 'unknown');
 
     return (
-        <Card className={`transition-colors ${isIdentified ? 'border-green-200 bg-green-50/30' : 'border-orange-200 bg-orange-50/30'}`}>
+        <Card className="transition-colors">
             <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        {getSpeakerTypeIcon(sessionSpeaker.speaker_type)}
-                        {getDisplayName()}
-                    </CardTitle>
-                    <Badge className={getSpeakerTypeColor(sessionSpeaker.speaker_type)}>
+                    <div className="flex items-center gap-2">
+                        <div className={`p-1 rounded-full ${isIdentified ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {getSpeakerTypeIcon(sessionSpeaker.speaker_type)}
+                        </div>
+                        <CardTitle className="text-lg">
+                            {getDisplayName()}
+                        </CardTitle>
+                    </div>
+                    <Badge variant="secondary" className={getSpeakerTypeColor(sessionSpeaker.speaker_type)}>
                         {sessionSpeaker.speaker_type.toUpperCase()}
                     </Badge>
                 </div>
