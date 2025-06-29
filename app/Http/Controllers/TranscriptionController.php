@@ -32,7 +32,7 @@ class TranscriptionController extends Controller
         $transcriptionsData = $transcriptions->map(function ($transcription) {
             $speakersFormatted = [];
             foreach ($transcription->speakers as $speaker) {
-                $speakerLabel = "Speaker " . $speaker->speaker_id;
+                $speakerLabel = $speaker->getDisplayNameFormatted();
                 $speakersFormatted[$speakerLabel] = $speaker->segments ?? [];
             }
 
@@ -121,7 +121,7 @@ class TranscriptionController extends Controller
         // Transform speakers array into expected format for frontend
         $speakersFormatted = [];
         foreach ($transcription->speakers as $speaker) {
-            $speakerLabel = "Speaker " . $speaker->speaker_id;
+            $speakerLabel = $speaker->getDisplayNameFormatted();
             $speakersFormatted[$speakerLabel] = $speaker->segments ?? [];
         }
 

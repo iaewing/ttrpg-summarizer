@@ -88,6 +88,6 @@ class Speaker extends Model
             return $this->player->name;
         }
 
-        return $this->speaker_id;
+        return "Speaker " . $this->speaker_id;
     }
 }
