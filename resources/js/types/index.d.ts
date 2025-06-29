@@ -78,6 +78,16 @@ export interface GameSession {
     summaries?: Summary[];
 }
 
+export interface SessionSpeaker {
+    id: string;
+    speakers: Speaker[];
+    player?: Player;
+    character?: Character;
+    speaker_type: 'dm' | 'player' | 'npc' | 'unknown';
+    total_segments: number;
+    recordings: string[];
+}
+
 export interface Recording {
     id: number;
     game_session_id: number;

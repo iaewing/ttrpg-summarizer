@@ -91,20 +91,80 @@ class GameSessionController extends Controller
             }
         ]);
 
+        // Get campaign players and characters for speaker identification
+        $campaign->load(['activePlayers.activeCharacters']);
+
+        // Collect all speakers from all transcriptions in this session
+        $allSpeakers = $session->recordings
+            ->filter(fn($recording) => $recording->transcription !== null)
+            ->flatMap(fn($recording) => $recording->transcription->speakers ?? collect());
+
+        // Group speakers by their identification status and create session-level speaker summary
+        $sessionSpeakers = $this->getSessionSpeakers($allSpeakers);
+
         return Inertia::render('sessions/show', [
             'campaign' => $campaign,
             'session' => $session,
+            'sessionSpeakers' => $sessionSpeakers,
+            'players' => $campaign->activePlayers,
             'stats' => [
                 'total_recordings' => $session->recordings->count(),
                 'transcribed_recordings' => $session->recordings->filter(fn($recording) => $recording->transcription !== null)->count(),
                 'total_summaries' => $session->summaries->count(),
-                'identified_speakers' => $session->recordings
-                    ->filter(fn($recording) => $recording->transcription !== null)
-                    ->flatMap(fn($recording) => $recording->transcription->speakers ?? collect())
-                    ->filter(fn($speaker) => $speaker->player_id !== null)
-                    ->count(),
+                'identified_speakers' => $allSpeakers->filter(fn($speaker) => $speaker->player_id !== null)->count(),
+                'total_unique_speakers' => $sessionSpeakers->count(),
             ]
         ]);
+    }
+
+    /**
+     * Get session-level speaker summary
+     */
+    private function getSessionSpeakers($allSpeakers)
+    {
+        // Group speakers by their current identification
+        $speakerGroups = [];
+        
+        foreach ($allSpeakers as $speaker) {
+            $groupKey = $this->getSpeakerGroupKey($speaker);
+            
+            if (!isset($speakerGroups[$groupKey])) {
+                $speakerGroups[$groupKey] = [
+                    'id' => $groupKey,
+                    'speakers' => [],
+                    'player' => $speaker->player,
+                    'character' => $speaker->character,
+                    'speaker_type' => $speaker->speaker_type,
+                    'total_segments' => 0,
+                    'recordings' => [],
+                ];
+            }
+            
+            $speakerGroups[$groupKey]['speakers'][] = $speaker;
+            $speakerGroups[$groupKey]['total_segments'] += count($speaker->segments ?? []);
+            
+            $recordingName = $speaker->transcription->recording->name ?? 'Unknown Recording';
+            if (!in_array($recordingName, $speakerGroups[$groupKey]['recordings'])) {
+                $speakerGroups[$groupKey]['recordings'][] = $recordingName;
+            }
+        }
+        
+        return collect($speakerGroups)->values();
+    }
+
+    /**
+     * Create a group key for speakers that should be considered the same person
+     */
+    private function getSpeakerGroupKey($speaker)
+    {
+        // If speaker is identified, group by player+character combination
+        if ($speaker->player_id || $speaker->character_id) {
+            return "identified_{$speaker->player_id}_{$speaker->character_id}";
+        }
+        
+        // If unidentified, group by speaker_id (this assumes same speaker_id across recordings = same person)
+        // This is a simplification - in reality, you might want more sophisticated matching
+        return "unidentified_speaker_{$speaker->speaker_id}";
     }
 
     public function edit(Campaign $campaign, GameSession $session)
@@ -160,5 +220,54 @@ class GameSessionController extends Controller
 
         return redirect()->route('campaigns.sessions.index', $campaign)
             ->with('success', "Session '{$sessionTitle}' deleted successfully!");
+    }
+
+    /**
+     * Update speaker identification for all matching speakers in the session
+     */
+    public function updateSessionSpeaker(Request $request, Campaign $campaign, GameSession $session)
+    {
+        if ($campaign->user_id !== Auth::id() || $session->campaign_id !== $campaign->id) {
+            abort(403);
+        }
+
+        $request->validate([
+            'speaker_group_id' => 'required|string',
+            'player_id' => 'nullable|exists:players,id',
+            'character_id' => 'nullable|exists:characters,id',
+            'speaker_type' => 'required|in:dm,player,npc,unknown',
+        ]);
+
+        // If character is provided, ensure it belongs to the player
+        if ($request->character_id && $request->player_id) {
+            $character = \App\Models\Character::find($request->character_id);
+            if ($character->player_id !== (int) $request->player_id) {
+                return back()->withErrors(['character_id' => 'Character must belong to the selected player.']);
+            }
+        }
+
+        // Get all speakers in this session that match the group
+        $allSpeakers = $session->recordings()
+            ->whereHas('transcription')
+            ->with('transcription.speakers')
+            ->get()
+            ->flatMap(fn($recording) => $recording->transcription->speakers ?? collect());
+
+        // Find speakers that match the group criteria
+        $speakersToUpdate = $allSpeakers->filter(function ($speaker) use ($request) {
+            $currentGroupKey = $this->getSpeakerGroupKey($speaker);
+            return $currentGroupKey === $request->speaker_group_id;
+        });
+
+        // Update all matching speakers
+        foreach ($speakersToUpdate as $speaker) {
+            $speaker->update([
+                'player_id' => $request->player_id,
+                'character_id' => $request->character_id,
+                'speaker_type' => $request->speaker_type,
+            ]);
+        }
+
+        return back()->with('success', 'Session speaker identification updated successfully!');
     }
 }

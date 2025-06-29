@@ -20,6 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // TTRPG Resources
     Route::resource('campaigns', CampaignController::class);
     Route::resource('campaigns.sessions', GameSessionController::class);
+    Route::post('campaigns/{campaign}/sessions/{session}/speakers', [GameSessionController::class, 'updateSessionSpeaker'])->name('sessions.speakers.update');
     Route::resource('sessions.recordings', RecordingController::class);
     Route::post('sessions/{session}/recordings/{recording}/transcribe', [RecordingController::class, 'transcribe'])->name('recordings.transcribe');
     Route::resource('players', PlayerController::class);

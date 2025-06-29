@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Campaign, GameSession, Recording } from '@/types';
+import { Campaign, GameSession, Recording, Player, SessionSpeaker } from '@/types';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import SpeakerIdentificationCard from '@/components/speaker-identification-card';
 import {
     ArrowLeft,
     Plus,
@@ -25,11 +27,14 @@ interface Props {
     session: GameSession & {
         recordings: Recording[];
     };
+    sessionSpeakers: SessionSpeaker[];
+    players: Player[];
     stats: {
         total_recordings: number;
         transcribed_recordings: number;
         total_summaries: number;
         identified_speakers: number;
+        total_unique_speakers: number;
     };
 }
 
@@ -84,7 +89,19 @@ const formatDuration = (seconds?: number) => {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
 
-export default function SessionShow({ campaign, session, stats }: Props) {
+export default function SessionShow({ campaign, session, sessionSpeakers, players, stats }: Props) {
+    const [updatingSpeaker, setUpdatingSpeaker] = useState<string | null>(null);
+
+    const handleSpeakerUpdate = (speakerGroupId: string, data: any) => {
+        setUpdatingSpeaker(speakerGroupId);
+        
+        router.post(route('sessions.speakers.update', [campaign.id, session.id]), {
+            speaker_group_id: speakerGroupId,
+            ...data,
+        }, {
+            onFinish: () => setUpdatingSpeaker(null),
+        });
+    };
     return (
         <AppLayout>
             <Head title={`${session.title} - ${campaign.name}`} />
@@ -141,7 +158,7 @@ export default function SessionShow({ campaign, session, stats }: Props) {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid gap-4 md:grid-cols-4 mb-6">
+                    <div className="grid gap-4 md:grid-cols-5 mb-6">
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center gap-2">
@@ -164,7 +181,16 @@ export default function SessionShow({ campaign, session, stats }: Props) {
                             <CardContent className="p-4">
                                 <div className="flex items-center gap-2">
                                     <Users className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">Identified Speakers</span>
+                                    <span className="text-sm text-muted-foreground">Unique Speakers</span>
+                                </div>
+                                <p className="text-2xl font-bold">{stats.total_unique_speakers}</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">Identified</span>
                                 </div>
                                 <p className="text-2xl font-bold">{stats.identified_speakers}</p>
                             </CardContent>
@@ -271,6 +297,49 @@ export default function SessionShow({ campaign, session, stats }: Props) {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Speaker Identification */}
+                    {sessionSpeakers.length > 0 && (
+                        <Card className="mt-6">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Users className="h-5 w-5" />
+                                            Speaker Identification
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Identify speakers detected across all recordings in this session
+                                        </CardDescription>
+                                    </div>
+                                    <Badge variant="outline">
+                                        {stats.identified_speakers} of {stats.total_unique_speakers} identified
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    {sessionSpeakers.map((sessionSpeaker) => (
+                                        <SpeakerIdentificationCard
+                                            key={sessionSpeaker.id}
+                                            sessionSpeaker={sessionSpeaker}
+                                            players={players}
+                                            onUpdate={handleSpeakerUpdate}
+                                            isUpdating={updatingSpeaker === sessionSpeaker.id}
+                                        />
+                                    ))}
+                                </div>
+                                {sessionSpeakers.length === 0 && (
+                                    <div className="text-center py-8">
+                                        <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                        <p className="text-muted-foreground">
+                                            No speakers detected yet. Upload and transcribe recordings to identify speakers.
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
         </AppLayout>
