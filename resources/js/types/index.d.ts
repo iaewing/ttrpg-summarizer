@@ -56,8 +56,8 @@ export interface Campaign {
     active_players_count?: number;
     active_characters_count?: number;
     sessions?: GameSession[];
-    players?: Player[];
-    characters?: Character[];
+    players?: (Player & { pivot?: { role: string; is_active: boolean; joined_at?: string; left_at?: string; notes?: string } })[];
+    characters?: (Character & { pivot?: { introduced_at?: string; left_at?: string; is_active: boolean; campaign_notes?: string } })[];
 }
 
 export interface GameSession {
@@ -146,7 +146,10 @@ export interface Player {
     created_at: string;
     updated_at: string;
     characters?: Character[];
-    campaigns?: Campaign[];
+    campaigns?: (Campaign & { pivot?: { role: string; is_active: boolean; joined_at?: string; left_at?: string; notes?: string } })[];
+    characters_count?: number;
+    active_campaigns_count?: number;
+    active_characters?: Character[];
 }
 
 export interface Character {
@@ -167,7 +170,7 @@ export interface Character {
     full_name?: string;
     display_name?: string;
     player?: Player;
-    campaigns?: Campaign[];
+    campaigns?: (Campaign & { pivot?: { introduced_at?: string; left_at?: string; is_active: boolean; campaign_notes?: string } })[];
 }
 
 export interface Summary {

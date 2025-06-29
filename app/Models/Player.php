@@ -41,6 +41,11 @@ class Player extends Model
         return $this->campaigns()->wherePivot('is_active', true);
     }
 
+    public function activeCharacters(): HasMany
+    {
+        return $this->characters()->where('is_active', true);
+    }
+
     public function speakers(): HasMany
     {
         return $this->hasMany(Speaker::class);
