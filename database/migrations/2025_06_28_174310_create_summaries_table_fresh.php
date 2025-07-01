@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('game_session_id')->constrained()->onDelete('cascade');
             $table->string('title');
-            $table->enum('type', ['full', 'highlights', 'character_actions', 'plot_points'])->default('full');
+            $table->enum('type', ['full', 'highlights', 'character_actions', 'plot_points', 'campaign_overview', 'previously_on'])->default('full');
             $table->longText('content'); // The actual summary content
             $table->json('metadata')->nullable(); // Key NPCs, locations, items, etc.
             $table->decimal('confidence', 5, 4)->nullable(); // AI confidence score

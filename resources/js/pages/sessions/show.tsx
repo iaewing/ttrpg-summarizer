@@ -10,7 +10,6 @@ import SpeakerIdentificationCard from '@/components/speaker-identification-card'
 import {
     ArrowLeft,
     Plus,
-    Calendar,
     Clock,
     FileAudio,
     FileText,
@@ -19,7 +18,10 @@ import {
     CheckCircle,
     XCircle,
     Users,
-    Download
+    Download,
+    Sparkles,
+    BookOpen,
+    Eye
 } from 'lucide-react';
 
 interface Props {
@@ -335,6 +337,98 @@ export default function SessionShow({ campaign, session, sessionSpeakers, player
                                         <p className="text-muted-foreground">
                                             No speakers detected yet. Upload and transcribe recordings to identify speakers.
                                         </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Summary Generation */}
+                    {stats.transcribed_recordings > 0 && (
+                        <Card className="mt-6">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <BookOpen className="h-5 w-5" />
+                                            Session Summaries
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Generate AI-powered summaries from your transcribed recordings
+                                        </CardDescription>
+                                    </div>
+                                    <Badge variant="outline">
+                                        {stats.total_summaries} generated
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                    <Button
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-auto p-4 flex-col"
+                                        onClick={() => {
+                                            router.post(`/sessions/${session.id}/summaries`, { type: 'full' });
+                                        }}
+                                    >
+                                        <FileText className="h-5 w-5 text-primary" />
+                                        <span className="font-medium">Full Summary</span>
+                                        <span className="text-xs text-muted-foreground text-center">
+                                            Comprehensive session overview
+                                        </span>
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-auto p-4 flex-col"
+                                        onClick={() => {
+                                            router.post(`/sessions/${session.id}/summaries`, { type: 'highlights' });
+                                        }}
+                                    >
+                                        <Sparkles className="h-5 w-5 text-primary" />
+                                        <span className="font-medium">Highlights</span>
+                                        <span className="text-xs text-muted-foreground text-center">
+                                            Key moments and events
+                                        </span>
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-auto p-4 flex-col"
+                                        onClick={() => {
+                                            router.post(`/sessions/${session.id}/summaries`, { type: 'character_actions' });
+                                        }}
+                                    >
+                                        <Users className="h-5 w-5 text-primary" />
+                                        <span className="font-medium">Character Actions</span>
+                                        <span className="text-xs text-muted-foreground text-center">
+                                            What each character did
+                                        </span>
+                                    </Button>
+
+                                    <Button
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-auto p-4 flex-col"
+                                        onClick={() => {
+                                            router.post(`/sessions/${session.id}/summaries`, { type: 'plot_points' });
+                                        }}
+                                    >
+                                        <BookOpen className="h-5 w-5 text-primary" />
+                                        <span className="font-medium">Plot Points</span>
+                                        <span className="text-xs text-muted-foreground text-center">
+                                            Story progression and hooks
+                                        </span>
+                                    </Button>
+                                </div>
+                                
+                                {stats.total_summaries > 0 && (
+                                    <div className="mt-4 pt-4 border-t">
+                                        <Button variant="ghost" asChild>
+                                            <Link href={`/campaigns/${campaign.id}/summaries`}>
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                View All Summaries
+                                            </Link>
+                                        </Button>
                                     </div>
                                 )}
                             </CardContent>

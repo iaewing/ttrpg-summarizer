@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
 import { FormEventHandler } from 'react';
+import { GAME_SYSTEMS } from '@/lib/game-systems';
 
 export default function CampaignCreate() {
     const { data, setData, post, processing, errors } = useForm({
@@ -20,21 +21,6 @@ export default function CampaignCreate() {
         e.preventDefault();
         post(route('campaigns.store'));
     };
-
-    const commonGameSystems = [
-        'D&D 5e',
-        'Pathfinder 2e',
-        'Pathfinder 1e',
-        'Call of Cthulhu',
-        'Vampire: The Masquerade',
-        'World of Darkness',
-        'Shadowrun',
-        'Cyberpunk RED',
-        'Star Wars RPG',
-        'Warhammer 40k',
-        'Custom System',
-        'Other'
-    ];
 
     return (
         <AppLayout>
@@ -84,7 +70,7 @@ export default function CampaignCreate() {
                                             <SelectValue placeholder="Select a game system" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {commonGameSystems.map((system) => (
+                                            {GAME_SYSTEMS.map((system) => (
                                                 <SelectItem key={system} value={system}>
                                                     {system}
                                                 </SelectItem>

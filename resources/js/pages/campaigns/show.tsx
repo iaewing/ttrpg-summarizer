@@ -24,7 +24,8 @@ import {
     Edit,
     Crown,
     User,
-    Trash2
+    Trash2,
+    BookOpen
 } from 'lucide-react';
 
 interface Props {
@@ -156,6 +157,12 @@ export default function CampaignShow({ campaign, availablePlayers, availableChar
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            <Button variant="outline" asChild>
+                                <Link href={`/campaigns/${campaign.id}/summaries`}>
+                                    <BookOpen className="h-4 w-4 mr-2" />
+                                    Summaries
+                                </Link>
+                            </Button>
                             <Button variant="outline" asChild>
                                 <Link href={`/campaigns/${campaign.id}/edit`}>
                                     <Edit className="h-4 w-4 mr-2" />

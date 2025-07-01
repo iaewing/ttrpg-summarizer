@@ -187,7 +187,7 @@ export interface Summary {
     id: number;
     game_session_id: number;
     title: string;
-    type: 'full' | 'highlights' | 'character_actions' | 'plot_points';
+    type: 'full' | 'highlights' | 'character_actions' | 'plot_points' | 'campaign_overview' | 'previously_on';
     content: string;
     metadata?: Record<string, any>;
     confidence?: number;

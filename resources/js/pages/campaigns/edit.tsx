@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { FormEventHandler } from 'react';
+import { GAME_SYSTEMS } from '@/lib/game-systems';
 
 interface Props {
     campaign: Campaign;
@@ -27,21 +28,6 @@ export default function CampaignEdit({ campaign }: Props) {
         e.preventDefault();
         patch(route('campaigns.update', campaign.id));
     };
-
-    const commonGameSystems = [
-        'D&D 5e',
-        'Pathfinder 2e',
-        'Pathfinder 1e',
-        'Call of Cthulhu',
-        'Vampire: The Masquerade',
-        'World of Darkness',
-        'Shadowrun',
-        'Cyberpunk RED',
-        'Star Wars RPG',
-        'Warhammer 40k',
-        'Custom System',
-        'Other'
-    ];
 
     return (
         <AppLayout>
@@ -91,7 +77,7 @@ export default function CampaignEdit({ campaign }: Props) {
                                             <SelectValue placeholder="Select a game system" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {commonGameSystems.map((system) => (
+                                            {GAME_SYSTEMS.map((system) => (
                                                 <SelectItem key={system} value={system}>
                                                     {system}
                                                 </SelectItem>

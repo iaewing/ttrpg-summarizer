@@ -86,6 +86,16 @@ class Summary extends Model
         return $this->type === 'plot_points';
     }
 
+    public function isCampaignOverview(): bool
+    {
+        return $this->type === 'campaign_overview';
+    }
+
+    public function isPreviouslyOn(): bool
+    {
+        return $this->type === 'previously_on';
+    }
+
     public function getWordCountAttribute(): int
     {
         return str_word_count(strip_tags($this->content));
