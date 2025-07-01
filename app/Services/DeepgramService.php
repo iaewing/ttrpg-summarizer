@@ -15,7 +15,7 @@ class DeepgramService
         $this->apiUrl = 'https://api.deepgram.com/v1/listen?model=nova-3&diarize=true&smart_format=true&punctuate=true&paragraphs=true';
     }
 
-    public function transcribeAudio(string $audioFilePath): array
+    public function transcribeAudio(string $audioFilePath, ?string $mimeType = null): array
     {
         if (!file_exists($audioFilePath)) {
             throw new Exception("Audio file not found: {$audioFilePath}");
@@ -26,6 +26,9 @@ class DeepgramService
             throw new Exception("Failed to read audio file: {$audioFilePath}");
         }
 
+        // Determine content type from MIME type or file extension
+        $contentType = $this->getContentType($audioFilePath, $mimeType);
+
         $curl = curl_init();
 
         curl_setopt_array($curl, [
@@ -35,7 +38,7 @@ class DeepgramService
             CURLOPT_POSTFIELDS => $audioData,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Token ' . $this->apiKey,
-                'Content-Type: audio/m4a',
+                'Content-Type: ' . $contentType,
                 'Content-Length: ' . strlen($audioData)
             ],
             CURLOPT_TIMEOUT => 120,
@@ -90,7 +93,79 @@ class DeepgramService
             $result['words'] = $alternative['words'];
         }
 
+        // Determine which source has better speaker separation
+        $paragraphSpeakers = [];
+        $wordSpeakers = [];
+
+        // Count unique speakers in paragraphs
         if (isset($alternative['paragraphs']['paragraphs'])) {
+            foreach ($alternative['paragraphs']['paragraphs'] as $paragraph) {
+                foreach ($paragraph['sentences'] as $sentence) {
+                    $speakerNumber = $sentence['speaker'] ?? 0;
+                    $paragraphSpeakers[$speakerNumber] = true;
+                }
+            }
+        }
+
+        // Count unique speakers in words
+        if (isset($alternative['words']) && !empty($alternative['words'])) {
+            foreach ($alternative['words'] as $word) {
+                $speakerNumber = $word['speaker'] ?? 0;
+                $wordSpeakers[$speakerNumber] = true;
+            }
+        }
+
+        // Use word-level data if it has more speakers, otherwise use paragraphs
+        $useWordLevel = count($wordSpeakers) > count($paragraphSpeakers);
+
+        if ($useWordLevel && !empty($wordSpeakers)) {
+            // Extract speakers from word-level data
+            $speakers = [];
+            $currentSpeaker = null;
+            $currentSegment = [];
+            
+            foreach ($alternative['words'] as $word) {
+                $speakerNumber = $word['speaker'] ?? 0;
+                $speakerLabel = "Speaker {$speakerNumber}";
+                
+                // If speaker changed, save previous segment and start new one
+                if ($currentSpeaker !== $speakerLabel) {
+                    if ($currentSpeaker !== null && !empty($currentSegment)) {
+                        if (!isset($speakers[$currentSpeaker])) {
+                            $speakers[$currentSpeaker] = [];
+                        }
+                        
+                        $speakers[$currentSpeaker][] = [
+                            'text' => trim(implode(' ', array_column($currentSegment, 'word'))),
+                            'start' => $currentSegment[0]['start'] ?? null,
+                            'end' => end($currentSegment)['end'] ?? null
+                        ];
+                    }
+                    
+                    $currentSpeaker = $speakerLabel;
+                    $currentSegment = [];
+                }
+                
+                $currentSegment[] = $word;
+            }
+            
+            // Don't forget the last segment
+            if ($currentSpeaker !== null && !empty($currentSegment)) {
+                if (!isset($speakers[$currentSpeaker])) {
+                    $speakers[$currentSpeaker] = [];
+                }
+                
+                $speakers[$currentSpeaker][] = [
+                    'text' => trim(implode(' ', array_column($currentSegment, 'word'))),
+                    'start' => $currentSegment[0]['start'] ?? null,
+                    'end' => end($currentSegment)['end'] ?? null
+                ];
+            }
+            
+            $result['speakers'] = $speakers;
+        }
+        // Fallback to paragraphs structure
+        elseif (isset($alternative['paragraphs']['paragraphs'])) {
             $speakers = [];
             foreach ($alternative['paragraphs']['paragraphs'] as $paragraph) {
                 foreach ($paragraph['sentences'] as $sentence) {
@@ -112,6 +187,31 @@ class DeepgramService
         }
 
         return $result;
+    }
+
+    /**
+     * Determine the correct Content-Type header based on MIME type or file extension
+     */
+    private function getContentType(string $audioFilePath, ?string $mimeType = null): string
+    {
+        // Use provided MIME type if available
+        if ($mimeType) {
+            return $mimeType;
+        }
+
+        // Fallback to file extension
+        $extension = strtolower(pathinfo($audioFilePath, PATHINFO_EXTENSION));
+        
+        return match ($extension) {
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'm4a' => 'audio/m4a',
+            'aac' => 'audio/aac',
+            'ogg' => 'audio/ogg',
+            'webm' => 'audio/webm',
+            'flac' => 'audio/flac',
+            default => 'audio/mpeg', // Default fallback
+        };
     }
 
     public function getSupportedMimeTypes(): array

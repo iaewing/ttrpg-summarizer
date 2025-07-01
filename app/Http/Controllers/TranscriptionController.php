@@ -81,7 +81,7 @@ class TranscriptionController extends Controller
             $transcription->update(['status' => 'processing']);
 
             $filePath = Storage::path($recording->file_path);
-            $result = $this->deepgramService->transcribeAudio($filePath);
+            $result = $this->deepgramService->transcribeAudio($filePath, $recording->mime_type);
 
             $transcription->update([
                 'status' => 'completed',
