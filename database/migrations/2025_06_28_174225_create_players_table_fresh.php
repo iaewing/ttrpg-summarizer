@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('players', function (Blueprint $table) {
-            $table->id();
-            $table->string('name'); // Real player name
-            $table->string('email')->nullable(); // Optional contact info
-            $table->text('notes')->nullable(); // DM notes about the player
-            $table->boolean('is_dm')->default(false); // Can this player DM?
-            $table->json('preferences')->nullable(); // Player preferences, favorite classes, etc.
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('players')) {
+            Schema::create('players', function (Blueprint $table) {
+                $table->id();
+                $table->string('name'); // Real player name
+                $table->string('email')->nullable(); // Optional contact info
+                $table->text('notes')->nullable(); // DM notes about the player
+                $table->boolean('is_dm')->default(false); // Can this player DM?
+                $table->json('preferences')->nullable(); // Player preferences, favorite classes, etc.
+                $table->timestamps();
+            });
+        }
     }
 
     /**

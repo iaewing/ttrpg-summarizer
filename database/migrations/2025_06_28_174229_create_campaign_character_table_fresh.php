@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('campaign_character', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('campaign_id')->constrained()->onDelete('cascade');
-            $table->foreignId('character_id')->constrained()->onDelete('cascade');
-            $table->date('introduced_at')->nullable(); // When character joined campaign
-            $table->date('left_at')->nullable(); // If character left/died
-            $table->boolean('is_active')->default(true);
-            $table->text('campaign_notes')->nullable(); // Campaign-specific character notes
-            $table->timestamps();
+        if (!Schema::hasTable('campaign_character')) {
+            Schema::create('campaign_character', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('campaign_id')->constrained()->onDelete('cascade');
+                $table->foreignId('character_id')->constrained()->onDelete('cascade');
+                $table->date('introduced_at')->nullable(); // When character joined campaign
+                $table->date('left_at')->nullable(); // If character left/died
+                $table->boolean('is_active')->default(true);
+                $table->text('campaign_notes')->nullable(); // Campaign-specific character notes
+                $table->timestamps();
 
-            $table->unique(['campaign_id', 'character_id']);
-        });
+                $table->unique(['campaign_id', 'character_id']);
+            });
+        }
     }
 
     /**
