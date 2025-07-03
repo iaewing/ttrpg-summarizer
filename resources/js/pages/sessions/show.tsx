@@ -263,8 +263,14 @@ export default function SessionShow({ campaign, session, sessionSpeakers, player
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
+                                                    <Button variant="ghost" size="sm" asChild>
+                                                        <Link href={route('sessions.recordings.show', [session.id, recording.id])}>
+                                                            <Eye className="h-4 w-4 mr-1" />
+                                                            View
+                                                        </Link>
+                                                    </Button>
                                                     {recording.transcription ? (
-                                                        <div className="flex items-center gap-2">
+                                                        <>
                                                             <Badge variant="outline" className="text-green-700 border-green-700">
                                                                 <FileText className="h-3 w-3 mr-1" />
                                                                 Transcribed
@@ -274,9 +280,9 @@ export default function SessionShow({ campaign, session, sessionSpeakers, player
                                                                     View Transcription
                                                                 </Link>
                                                             </Button>
-                                                        </div>
+                                                        </>
                                                     ) : (
-                                                        <div className="flex items-center gap-2">
+                                                        <>
                                                             <Badge variant="outline" className="text-muted-foreground">
                                                                 Not transcribed
                                                             </Badge>
@@ -289,7 +295,7 @@ export default function SessionShow({ campaign, session, sessionSpeakers, player
                                                             >
                                                                 Start Transcription
                                                             </Button>
-                                                        </div>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>

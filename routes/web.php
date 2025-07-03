@@ -7,6 +7,7 @@ use App\Http\Controllers\RecordingController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\SummaryController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -43,6 +44,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('transcriptions', TranscriptionController::class)->except(['edit', 'update']);
     Route::patch('speakers/{speaker}', [TranscriptionController::class, 'updateSpeaker'])->name('speakers.update');
 });
+
+// Route to serve audio files
+Route::get('sessions/{session}/recordings/{recording}/audio', [RecordingController::class, 'serveAudio'])
+    ->name('recordings.audio');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

@@ -103,6 +103,7 @@ export interface Recording {
     updated_at: string;
     formatted_duration?: string;
     formatted_file_size?: string;
+    audio_url?: string;
     game_session?: GameSession;
     transcription?: Transcription;
 }
@@ -112,6 +113,7 @@ export interface Transcription {
     recording_id: number;
     status: 'pending' | 'processing' | 'completed' | 'failed';
     transcript?: string;
+    text?: string;
     full_response?: Record<string, any>;
     confidence?: number;
     duration_seconds?: number;
@@ -120,7 +122,6 @@ export interface Transcription {
     updated_at: string;
     recording?: Recording;
     speakers?: Speaker[];
-    // Properties copied from recording for frontend compatibility
     original_filename?: string;
     file_size?: string;
     mime_type?: string;

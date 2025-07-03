@@ -27,12 +27,13 @@ The app flow is:
 [x] 3. **Create frontend pages** for player management  
 [x] 4. **Implement speaker identification** UI for mapping AI speakers to players/characters
 [x] 5. **Build summary generation** using the transcription data
-[ ] 6. **Add campaign dashboard** showing sessions, characters, recent activity
-[ ] 7. **Add audio playback** for uploaded recordings
-[ ] 8. **Laravel Cloud** hosting setup
-[ ] 9. **Add comprehensive error handling and logging**
-[ ] 10. **Add export functionality**
-[ ] 11. **Add user authentication and settings management**
+[ ] 6. **Add audio playback** for uploaded recordings
+[ ] 7. **Summaries Dashboard** to allow users to easily view all summaries for a particular session
+[ ] 8. **Add campaign dashboard** showing sessions, characters, recent activity
+[ ] 9. **Laravel Cloud** hosting setup
+[ ] 10. **Add comprehensive error handling and logging**
+[ ] 11. **Add export functionality**
+[ ] 12. **Add user authentication and settings management**
 [ ] 12. **Add testing and validation**
 
 ## Current Focus

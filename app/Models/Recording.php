@@ -71,4 +71,33 @@ class Recording extends Model
         
         return round($bytes / pow($k, $i), 2) . ' ' . $sizes[$i];
     }
+
+    /**
+     * Get the URL to the audio file
+     */
+    public function getAudioUrlAttribute(): string
+    {
+        if (!$this->file_path) {
+            return '';
+        }
+        
+        // Check if the file exists in storage
+        $publicPath = storage_path('app/public/' . $this->file_path);
+        $localPath = storage_path('app/' . $this->file_path);
+        
+        // Check if either path exists
+        $fileExists = file_exists($publicPath) || file_exists($localPath);
+        
+        if ($fileExists) {
+            return route('recordings.audio', [
+                'session' => $this->game_session_id,
+                'recording' => $this->id
+            ]);
+        }
+        
+        // Log the missing file for debugging
+        \Log::warning("Audio file not found in storage. Public path: {$publicPath}, Local path: {$localPath}");
+        
+        return '';
+    }
 }

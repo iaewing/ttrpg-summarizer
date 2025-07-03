@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Transcription;
 use App\Models\Recording;
 use App\Models\Speaker;
+use App\Models\Player;
+use App\Models\Character;
 use App\Services\DeepgramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Exception;
 
@@ -57,7 +61,7 @@ class TranscriptionController extends Controller
             'recording_id' => 'required|exists:recordings,id',
         ]);
 
-        $recording = Recording::findOrFail($request->recording_id);
+        $recording = Recording::with('gameSession.campaign')->findOrFail($request->recording_id);
 
         // Verify user owns this recording through campaign
         if ($recording->gameSession->campaign->user_id !== Auth::id()) {
@@ -70,34 +74,82 @@ class TranscriptionController extends Controller
                 ->with('info', 'Transcription already exists for this recording.');
         }
 
-        // Create transcription record
-        $transcription = Transcription::create([
-            'recording_id' => $recording->id,
-            'status' => 'pending',
-        ]);
+        // Start database transaction
+        DB::beginTransaction();
 
-        // Process transcription
         try {
-            $transcription->update(['status' => 'processing']);
+            // Create transcription record
+            $transcription = $recording->transcription()->create([
+                'status' => 'processing',
+            ]);
 
-            $filePath = Storage::path($recording->file_path);
+            // Check file in public disk first, then fall back to default disk
+            $filePath = storage_path('app/public/' . $recording->file_path);
+            
+            if (!file_exists($filePath)) {
+                // Try the default storage path
+                $filePath = storage_path('app/' . $recording->file_path);
+                
+                if (!file_exists($filePath)) {
+                    throw new Exception("Audio file not found in storage. Please ensure the file exists at: " . $recording->file_path);
+                }
+            }
+            
+            Log::info("Transcribing audio file: " . $filePath);
             $result = $this->deepgramService->transcribeAudio($filePath, $recording->mime_type);
 
+            // Update transcription with results
             $transcription->update([
                 'status' => 'completed',
-                'transcript' => $result['transcript'],
-                'full_response' => $result['full_response'],
-                'confidence' => $result['confidence'],
+                'transcript' => $result['transcript'] ?? '',
+                'full_response' => $result['full_response'] ?? null,
+                'confidence' => $result['confidence'] ?? null,
                 'duration_seconds' => $recording->duration_seconds,
             ]);
 
-            // Create speaker records from Deepgram response
-            $this->createSpeakerRecords($transcription, $result['speakers']);
-        } catch (Exception $e) {
-            $transcription->update([
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
+            // Create speaker records from Deepgram response if available
+            if (!empty($result['speakers'])) {
+                foreach ($result['speakers'] as $speakerLabel => $segments) {
+                    // Extract speaker ID from label (e.g., "Speaker 0" -> "0")
+                    $speakerId = (int) str_replace('Speaker ', '', $speakerLabel);
+                    
+                    // Create speaker record
+                    $transcription->speakers()->create([
+                        'speaker_id' => $speakerId,
+                        'speaker_type' => 'unknown', // Will be updated by user later
+                        'segments' => $segments,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('transcriptions.show', $transcription)
+                ->with('success', 'Recording transcribed successfully!');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Transcription failed: ' . $e->getMessage(), [
+                'recording_id' => $recording->id,
+                'exception' => $e
             ]);
+
+            // Update transcription status if it was created
+            if (isset($transcription)) {
+                $transcription->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                ]);
+            } else {
+                // If we don't have a transcription yet, create one with failed status
+                $transcription = $recording->transcription()->create([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                ]);
+            }
+
+            return redirect()->route('transcriptions.show', $transcription)
+                ->with('error', 'Transcription failed: ' . $e->getMessage());
         }
 
         return redirect()->route('transcriptions.show', $transcription)
