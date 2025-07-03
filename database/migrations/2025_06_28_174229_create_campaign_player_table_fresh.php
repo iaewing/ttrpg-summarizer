@@ -14,12 +14,11 @@ return new class extends Migration
         Schema::create('campaign_player', function (Blueprint $table) {
             $table->id();
             $table->foreignId('campaign_id')->constrained()->onDelete('cascade');
-            $table->foreignId('player_id')->constrained()->onDelete('cascade');
-            $table->enum('role', ['dm', 'player'])->default('player');
-            $table->date('joined_at')->nullable();
+            $table->foreignId('player_id')->constrained('users')->onDelete('cascade');
+            $table->date('joined_at');
             $table->date('left_at')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->text('notes')->nullable(); // Campaign-specific notes about this player
+            $table->string('role')->default('player'); // player, dm, co-dm, etc.
+            $table->json('permissions')->nullable();
             $table->timestamps();
 
             $table->unique(['campaign_id', 'player_id']);
